@@ -25,6 +25,7 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes
 
 # Repository Imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from ignition import (
     CLIENT_APP_IDENTIFIER,
     CLIENT_PRIVATE_KEY,

@@ -4,12 +4,14 @@
 import datetime
 import argparse
 import os
+import sys
 
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
 # Repository Imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from ignition import CLIENT_PRIVATE_KEY, CLIENT_CERTIFICATE
 
 
