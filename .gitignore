@@ -1,6 +1,5 @@
 # Exclude directories
 .vscode/
-certs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
