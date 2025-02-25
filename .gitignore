@@ -131,10 +131,3 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-
-###############################################################################
-# This must remain at the very bottom
-###############################################################################
-
-# Exclude .gitignore files
-!.gitignore
