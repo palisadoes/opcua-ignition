@@ -9,7 +9,6 @@ from pathlib import Path
 import logging
 import sys
 import socket
-from collections import namedtuple
 import time
 
 # PIP imports
@@ -22,8 +21,6 @@ from asyncua.crypto.validator import (
 )
 from asyncua import ua
 from cryptography.x509.oid import ExtendedKeyUsageOID
-from cryptography import x509
-from cryptography.hazmat.primitives import hashes
 
 # Repository Imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -33,6 +30,9 @@ from ignition import (
     CLIENT_CERTIFICATE,
     SERVER_CERTIFICATE,
 )
+
+from ignition.certificate import Client as ClientCert
+from ignition.certificate import Server as ServerCert
 
 # Setup logging
 logging.basicConfig(level=logging.WARN)
@@ -49,9 +49,6 @@ def main():
         None
 
     """
-    # Initialize key variables
-    verbose = True
-
     # Get CLI arguments
     args = arguments()
 
@@ -61,91 +58,62 @@ def main():
     # Print node_id value being polled
     print(f"\nGetting NodeID: {node_id}\n")
 
+    # Create client certificate objects
+    client_cert = ClientCert(
+        f"{args.directory}{os.sep}{args.client_certificate}",
+        f"{args.directory}{os.sep}{args.client_private_key}",
+    )
+
+    # Create client certificate objects
+    server_cert = ServerCert(
+        f"{args.directory}{os.sep}{args.ignition_server_certificate}"
+    )
+
+    # Print
+    print(
+        f"""\
+Client Cert Fingerprint/Signature:\t {client_cert.certificate_signature()}
+Server Cert Fingerprint/Signature:\t {server_cert.certificate_signature()}
+"""
+    )
+
+    # Create the polling URL
+    url = f"""opc.tcp://\
+{args.username}:{args.password}@{args.server}:{args.port}"""
+
     # Create an event loop
     count = args.count if bool(args.loop) else 1
     for _ in range(count):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        task = loop.create_task(poll(node_id, args, verbose))
-        # loop = asyncio.get_event_loop()
+        task = loop.create_task(poll(node_id, url, client_cert, server_cert))
         loop.set_debug(True)
         loop.run_until_complete(task)
         loop.close()
-
-        # Turn off verbosity
-        verbose = False
 
         # Sleep
         if bool(args.loop):
             time.sleep(args.interval)
 
 
-def get_certificate_fingerprint(der_filepath, hash_algorithm=hashes.SHA1()):
-    """
-    Reads a DER-encoded certificate file and returns its fingerprint.
-
-    Args:
-        der_filepath (str): Path to the DER-encoded certificate file.
-        hash_algorithm: The hash algorithm to use
-            (e.g., hashes.SHA256(), hashes.SHA1(), hashes.MD5()).
-            Defaults to SHA256.
-
-    Returns:
-        result: The hexadecimal representation of the certificate fingerprint.
-    """
-    # Initialize key variables
-    result = None
-    success = False
-
-    # Read the file
-    with open(der_filepath, "rb") as f:
-        der_data = f.read()
-
-    # Evaluate
-    try:
-        cert = x509.load_der_x509_certificate(der_data)
-        success = True
-    except Exception as e:
-        print(f"An error occurred: {e}")
-
-    # Return
-    if bool(success) is True:
-        fingerprint_bytes = cert.fingerprint(hash_algorithm)
-        result = fingerprint_bytes.hex()
-    return result
-
-
-async def poll(node_id, args, verbose):
+async def poll(node_id, url, client_cert, server_cert):
     """Poll the OPCUA server.
 
     Args:
         node_id: Node id to poll
-        args: argparse pargser object
-        verbose: Print certificate signatures if True
+        url: URL to poll
+        client_cert: ignition.certificate.Client object
+        server_cert: ignition.certificate.Server object
 
     Returns:
         None
 
 
     """
-    # Intialize key variables
-    Certificate = namedtuple("Certificate", "name filename")
-    file_client_certificate = (
-        f"{args.directory}{os.sep}{args.client_certificate}"
-    )
-    file_client_private_key = (
-        f"{args.directory}{os.sep}{args.client_private_key}"
-    )
-    file_server_certificate = (
-        f"{args.directory}{os.sep}{args.ignition_server_certificate}"
-    )
-    url = f"""opc.tcp://\
-{args.username}:{args.password}@{args.server}:{args.port}"""
-
     # Create a self signed certificate
     await setup_self_signed_certificate(
-        Path(file_client_private_key),
-        Path(file_client_certificate),
+        Path(client_cert.filepath_key),
+        Path(client_cert.filepath_cert),
         CLIENT_APP_IDENTIFIER,
         socket.gethostname(),
         [ExtendedKeyUsageOID.CLIENT_AUTH],
@@ -165,9 +133,9 @@ async def poll(node_id, args, verbose):
     # Apply the security certificates
     await client_session.set_security(
         SecurityPolicyBasic256Sha256,
-        certificate=file_client_certificate,
-        private_key=file_client_private_key,
-        server_certificate=file_server_certificate,
+        certificate=client_cert.filepath_cert,
+        private_key=client_cert.filepath_key,
+        server_certificate=server_cert.filepath_cert,
     )
 
     # Create a certficate validator
@@ -175,20 +143,6 @@ async def poll(node_id, args, verbose):
         CertificateValidatorOptions.EXT_VALIDATION
         | CertificateValidatorOptions.PEER_SERVER
     )
-
-    # Print certificate fingerprints
-    if bool(verbose):
-        for item in [
-            Certificate(
-                name="Server Cert Signature:", filename=file_server_certificate
-            ),
-            Certificate(
-                name="Client Cert Signature:", filename=file_client_certificate
-            ),
-        ]:
-            fingerprint = get_certificate_fingerprint(item.filename)
-            print(f"{item.name}\t {fingerprint}")
-        print("")
 
     # Get data
     try:
