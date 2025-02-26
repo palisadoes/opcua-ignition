@@ -256,32 +256,33 @@ Server API configured to use certificate based authtentication.
 
 Certificates:
 1. A private key will first need to be generated and placed \
-in the 'certs/' directory
+in the 'certs/' directory using the \
+ignition_opcua_generate_certificates.py script.
 2. You will need to download the server certificate to the \
 'certs/' directory too.
 
 Regenerating Server Certificates:
-1) Whenever you regenerate the server certificate you will need to restart \
+1. Whenever you regenerate the server certificate you will need to restart \
 the Ignition OPCUA module.
-2) Then you will need to install it in the 'certs/' directory for this \
+2. Then you will need to install it in the 'certs/' directory for this \
 script to use.
-3) If the OPCUA module is not restarted you will get a \
+3. If the OPCUA module is not restarted you will get a \
 "Reason='no certificate for provided thumbprint'" error.
 
 Regenerating This Scripts Client Certificates:
-1) This will need to be done whenever the client certificate expires
-2) When this is done, you will need to delete the existing \
+1. This will need to be done whenever the client certificate expires
+2. When this is done, you will need to delete the existing \
 '{CLIENT_APP_IDENTIFIER}' certificate on the server and replace it with \
 the newly generated one.
-3) Client certificates created using the \
+3. Client certificates created using the \
 'ignition_opcua_generate_certificates.py' script.
 
 Running the Script:
-1) The first time the script is run, you will get a \
+1. The first time the script is run, you will get a \
 'BadSecurityChecksFailed' message.
-2) This may be caused by the generated '{CLIENT_APP_IDENTIFIER}' \
+2. This may be caused by the generated '{CLIENT_APP_IDENTIFIER}' \
 certificate not being 'Trusted'.
-3) To rectify this, visit the OPCUA dashboard. \
+3. To rectify this, visit the OPCUA dashboard. \
 Go to the 'Config > Opcua > Security' menu and click on the \
 'Trust' button for '{CLIENT_APP_IDENTIFIER}'.
 """,
