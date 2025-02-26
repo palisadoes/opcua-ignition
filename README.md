@@ -58,7 +58,8 @@ The `ignition_opcua_generate_certificates.py` script queies an Ignition OPCUA se
 
 ```
 usage: ignition_opcua_client_with_certificates.py [-h] -s SERVER [-p PORT] -u USERNAME -x PASSWORD [-k CLIENT_PRIVATE_KEY] [-c CLIENT_CERTIFICATE]
-                                                  [-i IGNITION_SERVER_CERTIFICATE] [-d DIRECTORY] [-a NAMESPACE] [-t TYPE] [-n NODE]
+                                                  [-i IGNITION_SERVER_CERTIFICATE] [-d DIRECTORY] [-a NAMESPACE] [-t TYPE] [-n NODE] [-l] [-q INTERVAL]
+                                                  [-e COUNT]
 
 About:
 This script polls an 'Inductive Automation' Ignition OPCUA Server API configured to use certificate based authtentication.
@@ -98,9 +99,14 @@ options:
   -i IGNITION_SERVER_CERTIFICATE, --ignition_server_certificate IGNITION_SERVER_CERTIFICATE
                         Name of the Ignition server's certificate file. (Default: ignition-server.der)
   -d DIRECTORY, --directory DIRECTORY
-                        Certificate directory. (Default: certs/)
+                        Certificate directory. (Default: /home/peter/code/GitHub/palisadoes/opcua-ignition/certs)
   -a NAMESPACE, --namespace NAMESPACE
                         OPCUA Namespace. (Default: 1)
   -t TYPE, --type TYPE  Type of OPCUA nodeID to poll. Options include [s=string, i=integer](Default: s)
   -n NODE, --node NODE  OPCUA nodeID to poll
+  -l, --loop            Repeatedly loop to get the data if True
+  -q INTERVAL, --interval INTERVAL
+                        Looping interval in seconds, if '--loop' is True
+  -e COUNT, --count COUNT
+                        Number of loops to perform.
 ```

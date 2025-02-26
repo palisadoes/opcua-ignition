@@ -49,19 +49,31 @@ def main():
         None
 
     """
+    # Initialize key variables
+    verbose = True
+
     # Get CLI arguments
     args = arguments()
+
+    # Create the node ID
+    node_id = f"ns={args.namespace};{args.type}={args.node}"
+
+    # Print node_id value being polled
+    print(f"\nGetting NodeID: {node_id}\n")
 
     # Create an event loop
     count = args.count if bool(args.loop) else 1
     for _ in range(count):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        task = loop.create_task(poll(args))
+        task = loop.create_task(poll(node_id, args, verbose))
         # loop = asyncio.get_event_loop()
         loop.set_debug(True)
         loop.run_until_complete(task)
         loop.close()
+
+        # Turn off verbosity
+        verbose = False
 
         # Sleep
         if bool(args.loop):
@@ -103,11 +115,13 @@ def get_certificate_fingerprint(der_filepath, hash_algorithm=hashes.SHA1()):
     return result
 
 
-async def poll(args):
+async def poll(node_id, args, verbose):
     """Poll the OPCUA server.
 
     Args:
-        args: PollArgs object
+        node_id: Node id to poll
+        args: argparse pargser object
+        verbose: Print certificate signatures if True
 
     Returns:
         None
@@ -115,7 +129,6 @@ async def poll(args):
 
     """
     # Intialize key variables
-    node_id = f"ns={args.namespace};{args.type}={args.node}"
     Certificate = namedtuple("Certificate", "name filename")
     file_client_certificate = (
         f"{args.directory}{os.sep}{args.client_certificate}"
@@ -164,19 +177,18 @@ async def poll(args):
     )
 
     # Print certificate fingerprints
-    for item in [
-        Certificate(
-            name="Server Cert Signature:", filename=file_server_certificate
-        ),
-        Certificate(
-            name="Client Cert Signature:", filename=file_client_certificate
-        ),
-    ]:
-        fingerprint = get_certificate_fingerprint(item.filename)
-        print(f"{item.name}\t {fingerprint}")
-
-    # Print node_id value being polled
-    print(f"\nGetting NodeID: {node_id}\n")
+    if bool(verbose):
+        for item in [
+            Certificate(
+                name="Server Cert Signature:", filename=file_server_certificate
+            ),
+            Certificate(
+                name="Client Cert Signature:", filename=file_client_certificate
+            ),
+        ]:
+            fingerprint = get_certificate_fingerprint(item.filename)
+            print(f"{item.name}\t {fingerprint}")
+        print("")
 
     # Get data
     try:
@@ -184,7 +196,8 @@ async def poll(args):
             # Read tag
             opcua_node = client_session.get_node(node_id)
             print(
-                f"Node: {opcua_node} -> Value: {await opcua_node.read_value()}"
+                f"""\
+Node: {opcua_node} -> Value: {await opcua_node.read_value()}\n"""
             )
     except ua.UaError as exp:
         _logger.error(exp)
