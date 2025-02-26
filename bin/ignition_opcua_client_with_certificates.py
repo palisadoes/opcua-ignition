@@ -175,7 +175,7 @@ async def poll(args):
             root_node = client_session.get_server_node()
             print(root_node)
 
-            opcua_node = client_session.get_node(node_id).get_value()
+            opcua_node = client_session.get_node(node_id)
             print(f"{opcua_node}: {await opcua_node.read_value()}")
     except ua.UaError as exp:
         _logger.error(exp)
