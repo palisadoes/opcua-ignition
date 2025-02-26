@@ -10,6 +10,7 @@ import logging
 import sys
 import socket
 from collections import namedtuple
+import time
 
 # PIP imports
 from asyncua import Client
@@ -38,7 +39,7 @@ logging.basicConfig(level=logging.WARN)
 _logger = logging.getLogger("asyncua")
 
 
-async def main():
+def main():
     """Poll OPCUA Server.
 
     Args:
@@ -52,10 +53,19 @@ async def main():
     args = arguments()
 
     # Create an event loop
-    loop = asyncio.get_event_loop()
-    loop.set_debug(True)
-    loop.run_until_complete(await poll(args))
-    loop.close()
+    count = args.count if bool(args.loop) else 1
+    for _ in range(count):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        task = loop.create_task(poll(args))
+        # loop = asyncio.get_event_loop()
+        loop.set_debug(True)
+        loop.run_until_complete(task)
+        loop.close()
+
+        # Sleep
+        if bool(args.loop):
+            time.sleep(args.interval)
 
 
 def get_certificate_fingerprint(der_filepath, hash_algorithm=hashes.SHA1()):
@@ -133,9 +143,13 @@ async def poll(args):
         },
     )
 
-    # Other stuff
+    # Create the client session
     client_session = Client(url=url)
+
+    # Apply the app identifier to the client
     client_session.application_uri = CLIENT_APP_IDENTIFIER
+
+    # Apply the security certificates
     await client_session.set_security(
         SecurityPolicyBasic256Sha256,
         certificate=file_client_certificate,
@@ -161,22 +175,17 @@ async def poll(args):
         fingerprint = get_certificate_fingerprint(item.filename)
         print(f"{item.name}\t {fingerprint}")
 
-    # Print node_id value
+    # Print node_id value being polled
     print(f"\nGetting NodeID: {node_id}\n")
 
     # Get data
     try:
         async with client_session:
             # Read tag
-            root_node = client_session.get_root_node()
-            print(root_node)
-            root_node = client_session.get_objects_node()
-            print(root_node)
-            root_node = client_session.get_server_node()
-            print(root_node)
-
             opcua_node = client_session.get_node(node_id)
-            print(f"{opcua_node}: {await opcua_node.read_value()}")
+            print(
+                f"Node: {opcua_node} -> Value: {await opcua_node.read_value()}"
+            )
     except ua.UaError as exp:
         _logger.error(exp)
         sys.exit(1)
@@ -363,10 +372,31 @@ Type of OPCUA nodeID to poll. Options include \
         help="OPCUA nodeID to poll",
     )
 
+    parser.add_argument(
+        "-l",
+        "--loop",
+        action="store_true",
+        help="Repeatedly loop to get the data if True",
+    )
+
+    parser.add_argument(
+        "-q",
+        "--interval",
+        default=5,
+        help="Looping interval in seconds, if '--loop' is True",
+    )
+
+    parser.add_argument(
+        "-e",
+        "--count",
+        default=10,
+        help="Number of loops to perform.",
+    )
+
     # Return
     args = parser.parse_args()
     return args
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
