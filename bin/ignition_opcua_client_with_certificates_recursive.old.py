@@ -86,9 +86,7 @@ Server Cert Fingerprint/Signature:\t {server_cert.certificate_signature()}
     for _ in range(count):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        task = loop.create_task(
-            poll(node_id, url, client_cert, server_cert, filters=args.filters)
-        )
+        task = loop.create_task(poll(node_id, url, client_cert, server_cert))
         loop.set_debug(True)
         loop.run_until_complete(task)
         loop.close()
@@ -98,7 +96,7 @@ Server Cert Fingerprint/Signature:\t {server_cert.certificate_signature()}
             time.sleep(args.interval)
 
 
-async def poll(node_id, url, client_cert, server_cert, filters=None):
+async def poll(node_id, url, client_cert, server_cert):
     """Poll the OPCUA server.
 
     Args:
@@ -106,18 +104,12 @@ async def poll(node_id, url, client_cert, server_cert, filters=None):
         url: URL to poll
         client_cert: ignition.certificate.Client object
         server_cert: ignition.certificate.Server object
-        filter: List of strings to filter the nodes by
 
     Returns:
         None
 
 
     """
-    # Initialize key variables
-    node_children = []
-    nodes_for_variables = []
-    bad_nodes = []
-
     # Create a self signed certificate
     await setup_self_signed_certificate(
         Path(client_cert.filepath_key),
@@ -155,61 +147,39 @@ async def poll(node_id, url, client_cert, server_cert, filters=None):
     # Get data
     try:
         async with client_session:
-            # Get node
+            # Read root
+            # print(
+            #     "Root children are",
+            #     await client_session.nodes.root.get_children(),
+            # )
+
+            # Read tag
             opcua_node = client_session.get_node(node_id)
 
-            # print(dir(opcua_node))
+            print(dir(opcua_node))
 
-            print(f"\nNew Session - Node ID: {node_id}\n")
+            print(f"\n\n\nNode ID: {node_id}\n\n\n\n")
 
-            # Get child nodes
-            try:
-                node_children = await opcua_node.get_children()
-            except Exception as exp:
-                print(
-                    f"""\
-Node Children Exception type: {type(exp)}, Exception message: {str(exp)}, \
-Exception representation: {repr(exp)}"""
-                )
-                sys.exit(1)
+            print(
+                f"""\
+Node: {opcua_node} ->\nchildren: {await opcua_node.get_children()}\n"""
+            )
 
             # Get the nodes that represent point in time variable
-            # values versus tag labels and print the value
-            try:
-                nodes_for_variables = await opcua_node.get_variables()
-            except Exception as exp:
+            # values versus tag labels
+            variables = await opcua_node.get_variables()
+            for i in variables:
                 print(
                     f"""\
-Node Variables - Exception type: {type(exp)}, Exception message: {str(exp)}, \
-Exception representation: {repr(exp)}"""
-                )
-                sys.exit(1)
-
-            # Not all nodes_for_variables may be configured correctly
-            # There may not be values and they should be ignored
-            for i in nodes_for_variables:
-
-                # Ignore printing Node IDs with all filter string values if set.
-                if bool(filters) is True:
-                    if (
-                        string_containing_strings(i.nodeid.Identifier, filters)
-                        is False
-                    ):
-                        continue
-
-                # Ignore misconfigured tag values
-                try:
-                    value = await i.get_value()
-                except:
-                    bad_nodes.append(i)
-                    continue
-
-                # Print values
-                print(
-                    f"""\
----> Node ID Data: {i.nodeid.Identifier}, Value: {value}\n"""
+NodeID: {i.nodeid.Identifier}, Value: {await i.get_value()}\n"""
                 )
 
+            print(f"Node: {opcua_node} -> variables: {variables}\n")
+
+            print(
+                f"""\
+Node: {opcua_node} -> Value: {await opcua_node.get_value()}\n"""
+            )
     except ua.UaError as exp:
         _logger.error(exp)
         sys.exit(1)
@@ -225,50 +195,18 @@ not being 'Trusted'. To rectify this, visit the OPCUA dashboard. Go to the \
         )
         print(
             f"""\
-Timeout - Node ID: {node_id}, Exception type: {type(exp)}, \
-Exception message: {str(exp)}, Exception representation: {repr(exp)}
+Exception type: {type(exp)}, Exception message: {str(exp)}, \
+Exception representation: {repr(exp)}
 """
         )
         sys.exit(1)
     except Exception as exp:
         print(
             f"""\
-Other - Node ID: {node_id}, Exception type: {type(exp)}, \
-Exception message: {str(exp)}, Exception representation: {repr(exp)}"""
+Exception type: {type(exp)}, Exception message: {str(exp)}, \
+Exception representation: {repr(exp)}"""
         )
         sys.exit(1)
-
-    # Extract the nodes that represent variables
-    # from the list of children
-    for i in nodes_for_variables:
-        node_children.remove(i)
-
-    # Recursively get information
-    for i in node_children:
-        # Sleep so that we don't overload the OPCUA server
-        time.sleep(1)
-        await poll(i, url, client_cert, server_cert, filters=filters)
-
-
-def string_containing_strings(data_string, filter_list):
-    """Validate whether a string contains all elements in a filter list.
-
-    Args:
-        data_string: The list to filter.
-        filter_list: A list of strings for filtering.
-
-    Returns:
-        result: True if the string contains any of the elements.
-    """
-    # Initialize key values
-    result = False
-    new_list = []
-
-    # Trim blank values and return
-    if bool(filter_list) and isinstance(filter_list, list):
-        new_list = [_ for _ in filter_list if bool(_) is True]
-        result = all([_ in data_string for _ in new_list if bool(_)])
-    return result
 
 
 def arguments():
@@ -449,16 +387,6 @@ Type of OPCUA nodeID to poll. Options include \
         "--count",
         default=10,
         help="Number of loops to perform.",
-    )
-
-    parser.add_argument(
-        "-f",
-        "--filters",
-        nargs="*",
-        default=None,
-        help="""\
-Space separated list of strings used to filter the OPCUA Nodes. It is an \
-'AND' function. All filter values must be present in the Node name.""",
     )
 
     # Return

@@ -318,7 +318,7 @@ Name of the Ignition server's certificate file. (Default: \
     parser.add_argument(
         "-a",
         "--namespace",
-        default=1,
+        default=2,
         type=int,
         help="OPCUA Namespace. (Default: 1)",
     )
