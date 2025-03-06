@@ -116,7 +116,6 @@ async def poll(node_id, url, client_cert, server_cert, filters=None):
     # Initialize key variables
     node_children = []
     nodes_for_variables = []
-    bad_nodes = []
 
     # Create a self signed certificate
     await setup_self_signed_certificate(
@@ -201,7 +200,11 @@ Exception representation: {repr(exp)}"""
                 try:
                     value = await i.get_value()
                 except:
-                    bad_nodes.append(i)
+                    print(
+                        f"""\
+---> BAD Node ID: {i.nodeid.Identifier}\n"""
+                    )
+
                     continue
 
                 # Print values
