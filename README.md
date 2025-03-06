@@ -110,3 +110,63 @@ options:
   -e COUNT, --count COUNT
                         Number of loops to perform.
 ```
+
+### Recursively Querying the Ignition API
+
+The `ignition_opcua_client_with_certificates_recursive.py` recursively script queies an Ignition OPCUA server pre-configured to accept certificate signed queries.
+
+```
+usage: ignition_opcua_client_with_certificates_recursive.py [-h] -s SERVER [-p PORT] -u USERNAME -x PASSWORD [-k CLIENT_PRIVATE_KEY] [-c CLIENT_CERTIFICATE] [-i IGNITION_SERVER_CERTIFICATE]
+                                                            [-d DIRECTORY] [-a NAMESPACE] [-t TYPE] -n NODE [-l] [-q INTERVAL] [-e COUNT] [-f [FILTERS ...]]
+
+About:
+This script polls an 'Inductive Automation' Ignition OPCUA Server API configured to use certificate based authtentication.
+
+Certificates:
+1. A private key will first need to be generated and placed in the 'certs/' directory using the ignition_opcua_generate_certificates.py script.
+2. You will need to download the server certificate to the 'certs/' directory too.
+
+Regenerating Server Certificates:
+1. Whenever you regenerate the server certificate you will need to restart the Ignition OPCUA module.
+2. Then you will need to install it in the 'certs/' directory for this script to use.
+3. If the OPCUA module is not restarted you will get a "Reason='no certificate for provided thumbprint'" error.
+
+Regenerating This Scripts Client Certificates:
+1. This will need to be done whenever the client certificate expires
+2. When this is done, you will need to delete the existing 'Tag:Read:Test' certificate on the server and replace it with the newly generated one.
+3. Client certificates created using the 'ignition_opcua_generate_certificates.py' script.
+
+Running the Script:
+1. The first time the script is run, you will get a 'BadSecurityChecksFailed' message.
+2. This may be caused by the generated 'Tag:Read:Test' certificate not being 'Trusted'.
+3. To rectify this, visit the OPCUA dashboard. Go to the 'Config > Opcua > Security' menu and click on the 'Trust' button for 'Tag:Read:Test'.
+
+options:
+  -h, --help            show this help message and exit
+  -s SERVER, --server SERVER
+                        OPCUA server to poll.
+  -p PORT, --port PORT  OPCUA server port poll.
+  -u USERNAME, --username USERNAME
+                        OPCUA server password.
+  -x PASSWORD, --password PASSWORD
+                        OPCUA server username.
+  -k CLIENT_PRIVATE_KEY, --client_private_key CLIENT_PRIVATE_KEY
+                        Name of the client's private key file. (Default: poc_test_ignition_client_key.pem).
+  -c CLIENT_CERTIFICATE, --client_certificate CLIENT_CERTIFICATE
+                        Name of the client's certificate file. (Default: poc_test_ignition_client_cert.der)
+  -i IGNITION_SERVER_CERTIFICATE, --ignition_server_certificate IGNITION_SERVER_CERTIFICATE
+                        Name of the Ignition server's certificate file. (Default: ignition-server.der)
+  -d DIRECTORY, --directory DIRECTORY
+                        Certificate directory. (Default: /home/peter/code/GitHub/palisadoes/opcua-ignition/certs)
+  -a NAMESPACE, --namespace NAMESPACE
+                        OPCUA Namespace. (Default: 1)
+  -t TYPE, --type TYPE  Type of OPCUA nodeID to poll. Options include [s=string, i=integer](Default: s)
+  -n NODE, --node NODE  OPCUA nodeID to poll
+  -l, --loop            Repeatedly loop to get the data if True
+  -q INTERVAL, --interval INTERVAL
+                        Looping interval in seconds, if '--loop' is True
+  -e COUNT, --count COUNT
+                        Number of loops to perform.
+  -f [FILTERS ...], --filters [FILTERS ...]
+                        Space separated list of strings used to filter the OPCUA Nodes. It is an 'AND' function. All filter values must be present in the Node name.
+```

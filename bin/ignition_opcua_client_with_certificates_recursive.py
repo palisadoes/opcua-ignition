@@ -297,7 +297,7 @@ def arguments():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=f"""\
 About:
-This script polls an 'Inductive Automation' Ignition OPCUA \
+This script recursively polls an 'Inductive Automation' Ignition OPCUA \
 Server API configured to use certificate based authtentication.
 
 Certificates:
