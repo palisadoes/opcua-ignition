@@ -28,8 +28,13 @@ $ pip3 install -r requirements.txt
 The scripts are easy to run. Here is some important information.
 
 1. The scripts are located in the `bin/` and are expected to be run from the repository root.
+1. The scripts are configured to only work with Ignition certificate based authentication.
+1. You will need to first need to generate certificates using the `ignition_opcua_generate_certificates.py` script.
 1. All certificates and private keys are expected to be located in the `certs/` directory
     1. The `ignition_opcua_generate_certificates.py` generates its certificates in the `certs/` directory
+1. All clients use the same certificates. This means you only need to make configuration changes on the Ignition server only once.
+1. The clients automatically upload their common certificate the first time they are run. There will be an error and you will need to accept the certificate in the Ignition `Config -> Opcua -> Security -> Server` web UI screen.
+1. If configured correctly, subsequent polling will work.
 
 The scripts are meant solely as a proof of concept    
 
